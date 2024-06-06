@@ -27,9 +27,12 @@ from openai import AsyncOpenAI
 from core.authentication import AuthenticationHelper
 from text import nonewlines
 
-
 @dataclass
 class Document:
+    """
+    Represents a document with various properties and methods for serialization.
+    """
+
     id: Optional[str]
     content: Optional[str]
     embedding: Optional[List[float]]
@@ -43,7 +46,14 @@ class Document:
     score: Optional[float] = None
     reranker_score: Optional[float] = None
 
+
     def serialize_for_results(self) -> dict[str, Any]:
+        """
+        Serializes the document object into a dictionary format suitable for results.
+        
+        Returns:
+            A dictionary containing the serialized document.
+        """
         return {
             "id": self.id,
             "content": self.content,
@@ -72,7 +82,15 @@ class Document:
 
     @classmethod
     def trim_embedding(cls, embedding: Optional[List[float]]) -> Optional[str]:
-        """Returns a trimmed list of floats from the vector embedding."""
+        """
+        Returns a trimmed list of floats from the vector embedding.
+
+        Args:
+            embedding: The vector embedding to be trimmed.
+
+        Returns:
+            A trimmed string representation of the embedding if it exists, otherwise None.
+        """
         if embedding:
             if len(embedding) > 2:
                 # Format the embedding list to show the first 2 items followed by the count of the remaining items."""
@@ -85,12 +103,20 @@ class Document:
 
 @dataclass
 class ThoughtStep:
+    """
+    Represents a thought step with a title, description, and optional properties.
+    """
+
     title: str
     description: Optional[Any]
     props: Optional[dict[str, Any]] = None
 
 
 class Approach(ABC):
+    """
+    Abstract base class for different approaches.
+    """
+
     def __init__(
         self,
         search_client: SearchClient,
@@ -118,6 +144,16 @@ class Approach(ABC):
         self.vision_token_provider = vision_token_provider
 
     def build_filter(self, overrides: dict[str, Any], auth_claims: dict[str, Any]) -> Optional[str]:
+        """
+        Builds the filter string based on the provided overrides and authentication claims.
+
+        Args:
+            overrides: A dictionary of override values.
+            auth_claims: A dictionary of authentication claims.
+
+        Returns:
+            The filter string or None if no filters are specified.
+        """
         exclude_category = overrides.get("exclude_category")
         security_filter = self.auth_helper.build_security_filters(overrides, auth_claims)
         filters = []
@@ -138,6 +174,22 @@ class Approach(ABC):
         minimum_search_score: Optional[float],
         minimum_reranker_score: Optional[float],
     ) -> List[Document]:
+        """
+        Performs a search using the specified parameters.
+
+        Args:
+            top: The maximum number of results to return.
+            query_text: The search query text.
+            filter: The filter string.
+            vectors: The list of vector queries.
+            use_semantic_ranker: Whether to use the semantic ranker.
+            use_semantic_captions: Whether to use semantic captions.
+            minimum_search_score: The minimum search score threshold.
+            minimum_reranker_score: The minimum reranker score threshold.
+
+        Returns:
+            A list of Document objects representing the search results.
+        """
         # Use semantic ranker if requested and if retrieval mode is text or hybrid (vectors + text)
         if use_semantic_ranker and query_text:
             results = await self.search_client.search(
@@ -190,6 +242,17 @@ class Approach(ABC):
     def get_sources_content(
         self, results: List[Document], use_semantic_captions: bool, use_image_citation: bool
     ) -> list[str]:
+        """
+        Retrieves the content of the sources based on the search results.
+
+        Args:
+            results: The list of Document objects representing the search results.
+            use_semantic_captions: Whether to use semantic captions.
+            use_image_citation: Whether to use image citation.
+
+        Returns:
+            A list of source contents.
+        """
         if use_semantic_captions:
             return [
                 (self.get_citation((doc.sourcepage or ""), use_image_citation))
